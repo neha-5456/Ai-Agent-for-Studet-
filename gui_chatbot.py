@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import scrolledtext, messagebox
 from agent_setup import agent_executor, parser  
 from langchain.schema import HumanMessage, AIMessage
+import json
 
 class ExamChatbotApp:
     def __init__(self, root):
@@ -44,36 +45,59 @@ class ExamChatbotApp:
 
  
 
+   
+
     def send_message(self, event=None):
         user_msg = self.user_input.get().strip()
+        print(user_msg)
         if not user_msg:
             return
         self.insert_message("You", user_msg)
         self.user_input.delete(0, tk.END)
 
-       
         self.chat_history.append(HumanMessage(content=user_msg))
-
         try:
             raw_response = agent_executor.invoke({
                 "query": user_msg,
                 "chat_history": self.chat_history
             })
 
-            structured_response = parser.parse(raw_response.get("output")[0]["text"])
+            # raw_response might have 'output' either as a string, or as a list/dict structure
+            out = raw_response.get("output")
 
-            assistant_msg = f"Exam: {structured_response.exam_name}\n\n"
-            assistant_msg += "Topics:\n" + "\n".join(f"- {t}" for t in structured_response.topics) + "\n\n"
-            assistant_msg += "Questions:\n" + "\n".join(f"- {q}" for q in structured_response.questions) + "\n\n"
-            assistant_msg += "Previous Year Summary:\n" + structured_response.previous_year_summary
+            # Case A: output is a string (plain)
+            if isinstance(out, str):
+                assistant_text = out
+            # Case B: output is a list and first element is dict
+            elif isinstance(out, list) and len(out) > 0 and isinstance(out[0], dict):
+                # out[0] is dict, attempt to access "text"
+                assistant_text = out[0].get("text", "")
+            else:
+                # fallback: stringify
+                assistant_text = str(out)
+
+            # Now attempt structured parsing if possible
+            structured = None
+            try:
+                structured = parser.parse(assistant_text)
+            except Exception as pe:
+                structured = None  # cannot parse
+
+            if structured:
+                assistant_msg = f"Exam: {structured.exam_name}\n\n"
+                assistant_msg += "Topics:\n" + "\n".join(f"- {t}" for t in structured.topics) + "\n\n"
+                assistant_msg += "Questions:\n" + "\n".join(f"- {q}" for q in structured.questions) + "\n\n"
+                assistant_msg += "Previous Year Summary:\n" + structured.previous_year_summary
+            else:
+                assistant_msg = assistant_text
 
             self.insert_message("Assistant", assistant_msg)
-
-            
-            self.chat_history.append(AIMessage(content=raw_response.get("output")[0]["text"]))
+            # Add to history the actual assistant text
+            self.chat_history.append(AIMessage(content=assistant_text))
 
         except Exception as e:
             self.insert_message("Assistant", f"Error parsing response: {e}")
+
 
     def clear_chat(self):
         """Clear the chat window and history"""

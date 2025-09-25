@@ -30,8 +30,8 @@ prompt = ChatPromptTemplate([
     ),
     ("placeholder", "{chat_history}"),
     ("human", "{query}"),
-    ("placeholder", "{agent_scratchpad}")  # <- Use correct variable name
-]).partial(format_instructions="Answer in a clear step-by-step manner, with examples if possible.")
+    ("placeholder", "{agent_scratchpad}")
+]).partial(format_instructions="Explain concepts in a clear, step-by-step manner, with examples if possible, as if explaining to a child.")
 
 # Agent
 agent = create_tool_calling_agent(
