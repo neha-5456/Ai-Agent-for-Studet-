@@ -38,7 +38,7 @@ gov_exam_assistant/
 
 ```bash
 git clone <repo-url>
-cd gov_exam_assistant
+cd Ai-Agent-for-Studet-
 Create and activate a Python environment:
 python -m venv venv
 source venv/bin/activate    # Linux/Mac
